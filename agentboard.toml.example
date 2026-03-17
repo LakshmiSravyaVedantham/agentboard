@@ -1,0 +1,54 @@
+[server]
+port = 8000
+host = "0.0.0.0"
+
+[security]
+allowed_roots = ["~/projects", "~/code"]
+require_plan_approval = true
+
+[orchestrator]
+provider = "anthropic"
+model = "claude-sonnet-4-6"
+api_key_env = "ANTHROPIC_API_KEY"
+
+[limits]
+max_concurrent_teams = 4
+max_runtime_seconds = 600
+max_output_lines = 10000
+
+[backend]
+default = "claude"
+
+[backends.claude]
+command = "claude"
+args = ["--print", "{task}"]
+mode = "one-shot"
+description = "Claude Code CLI"
+
+[backends.aider]
+command = "aider"
+args = ["--message", "{task}"]
+mode = "one-shot"
+description = "Aider AI pair programmer"
+
+[backends.codex]
+command = "codex"
+args = ["{task}"]
+mode = "one-shot"
+description = "OpenAI Codex CLI"
+
+[backends.gemini]
+command = "gemini"
+args = ["{task}"]
+mode = "one-shot"
+description = "Google Gemini CLI"
+
+[backends.goose]
+command = "goose"
+args = ["run", "{task}"]
+mode = "one-shot"
+description = "Block Goose CLI"
+
+[logging]
+output_dir = "~/.agentboard/logs"
+enabled = true
