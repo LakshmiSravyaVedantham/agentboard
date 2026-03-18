@@ -2,6 +2,7 @@ use reqwest::Client;
 use serde::Deserialize;
 use serde_json::json;
 
+#[derive(Clone)]
 pub struct LlmClient {
     client: Client,
     api_key: String,

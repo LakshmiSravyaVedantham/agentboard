@@ -4,6 +4,7 @@ pub mod prompt;
 use crate::config::Config;
 use client::{LlmClient, TriagePlan};
 
+#[derive(Clone)]
 pub struct Orchestrator {
     client: LlmClient,
 }

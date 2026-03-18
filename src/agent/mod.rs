@@ -5,6 +5,7 @@ pub mod runner;
 #[derive(Debug, Clone, PartialEq)]
 pub enum BackendMode { OneShot, Interactive }
 
+#[derive(Clone)]
 pub struct BackendConfig {
     pub name: String,
     pub command: String,
