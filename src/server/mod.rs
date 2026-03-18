@@ -2,10 +2,42 @@ pub mod routes;
 pub mod ws;
 
 use crate::state::AppState;
-use axum::{Router, routing::{get, post, delete}};
-use axum::http::{Method, header::{CONTENT_TYPE, AUTHORIZATION}};
+use axum::{
+    Router,
+    routing::{get, post, delete},
+    response::{Html, IntoResponse},
+    http::{header, Method, StatusCode as SC},
+};
+use rust_embed::RustEmbed;
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
+
+#[derive(RustEmbed)]
+#[folder = "frontend/dist"]
+struct FrontendAssets;
+
+async fn serve_frontend(uri: axum::http::Uri) -> impl IntoResponse {
+    let path = uri.path().trim_start_matches('/');
+
+    // Try exact path first
+    if !path.is_empty() {
+        if let Some(file) = FrontendAssets::get(path) {
+            let mime = mime_guess::from_path(path).first_or_octet_stream();
+            return (
+                [(header::CONTENT_TYPE, mime.as_ref().to_string())],
+                file.data.to_vec(),
+            )
+                .into_response();
+        }
+    }
+
+    // SPA fallback: serve index.html for all non-API, non-WS routes
+    if let Some(file) = FrontendAssets::get("index.html") {
+        return Html(String::from_utf8_lossy(&file.data).to_string()).into_response();
+    }
+
+    (SC::NOT_FOUND, "Not found").into_response()
+}
 
 pub fn build_router(state: Arc<AppState>) -> Router {
     let public = Router::new()
@@ -27,9 +59,10 @@ pub fn build_router(state: Arc<AppState>) -> Router {
     let cors = CorsLayer::new()
         .allow_origin(tower_http::cors::Any)
         .allow_methods([Method::GET, Method::POST, Method::DELETE])
-        .allow_headers([CONTENT_TYPE, AUTHORIZATION]);
+        .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION]);
 
     public.merge(protected)
+        .fallback(serve_frontend)
         .layer(cors)
         .with_state(state)
 }
