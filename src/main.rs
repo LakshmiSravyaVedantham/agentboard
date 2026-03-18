@@ -4,6 +4,7 @@ use agentboard::agent::registry::BackendRegistry;
 use agentboard::orchestrator::Orchestrator;
 use agentboard::state::AppState;
 use agentboard::server::build_router;
+use agentboard::shutdown::graceful_shutdown;
 use clap::{Parser, Subcommand};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -62,7 +63,7 @@ async fn main() {
                 start_time: Utc::now(),
             });
 
-            let app = build_router(state);
+            let app = build_router(state.clone());
             let addr = format!("{}:{}", config.server.host, config.server.port);
 
             println!("┌────────────────────────────────────┐");
@@ -74,7 +75,11 @@ async fn main() {
             println!("└────────────────────────────────────┘");
 
             let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-            axum::serve(listener, app).await.unwrap();
+            let shutdown = graceful_shutdown(state.clone());
+            axum::serve(listener, app)
+                .with_graceful_shutdown(shutdown)
+                .await
+                .unwrap();
         }
     }
 }
