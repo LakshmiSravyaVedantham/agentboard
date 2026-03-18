@@ -94,7 +94,7 @@ fn default_provider() -> String {
     "anthropic".into()
 }
 fn default_model() -> String {
-    "claude-sonnet-4-6".into()
+    "claude-sonnet-4-20250514".into()
 }
 fn default_api_key_env() -> String {
     "ANTHROPIC_API_KEY".into()

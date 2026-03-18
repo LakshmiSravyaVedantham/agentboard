@@ -22,6 +22,22 @@ pub struct TriagePlan {
     pub teams: Vec<TeamAssignment>,
 }
 
+fn strip_markdown_code_block(text: &str) -> String {
+    let trimmed = text.trim();
+    if trimmed.starts_with("```") {
+        // Remove opening ```json or ``` and closing ```
+        let without_opening = if let Some(pos) = trimmed.find('\n') {
+            &trimmed[pos + 1..]
+        } else {
+            trimmed
+        };
+        let without_closing = without_opening.trim_end().trim_end_matches("```").trim();
+        without_closing.to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
 impl LlmClient {
     pub fn new(provider: &str, model: &str, api_key: &str) -> Self {
         Self {
@@ -38,7 +54,8 @@ impl LlmClient {
         user_prompt: &str,
     ) -> Result<TriagePlan, Box<dyn std::error::Error + Send + Sync>> {
         let response_text = self.call(system_prompt, user_prompt).await?;
-        let plan: TriagePlan = serde_json::from_str(&response_text)?;
+        let cleaned = strip_markdown_code_block(&response_text);
+        let plan: TriagePlan = serde_json::from_str(&cleaned)?;
         Ok(plan)
     }
 
@@ -82,7 +99,11 @@ impl LlmClient {
             .json(&body)
             .send()
             .await?;
+        let status = resp.status();
         let data: serde_json::Value = resp.json().await?;
+        if !status.is_success() {
+            return Err(format!("Anthropic API error ({}): {}", status, data).into());
+        }
         Ok(data["content"][0]["text"]
             .as_str()
             .unwrap_or("")
